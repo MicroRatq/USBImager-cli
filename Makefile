@@ -56,6 +56,10 @@ $(OUT_DIR)/%.o: src/%.c
 	@mkdir -p $(OUT_DIR) 2>/dev/null || mkdir $(OUT_DIR) 2>/dev/null || true
 	$(CC) $(CFLAGS) -o $@ -c $<
 
+$(OUT_DIR)/%.o: src/%.m
+	@mkdir -p $(OUT_DIR) 2>/dev/null || mkdir $(OUT_DIR) 2>/dev/null || true
+	$(CC) $(CFLAGS) -o $@ -c $<
+
 $(OUT_DIR)/manifest.o: src/manifest.xml
 	@mkdir -p $(OUT_DIR) 2>/dev/null || mkdir $(OUT_DIR) 2>/dev/null || true
 	@echo Building manifest...

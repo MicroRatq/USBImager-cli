@@ -33,8 +33,8 @@
 #include <ntdddisk.h>
 #include "disks.h"
 
-int verbose = 0;
-int baud = 115200;
+extern int verbose;
+extern int baud;
 
 extern void main_addToCombobox(char *text);
 extern void main_getErrorMessage(void);

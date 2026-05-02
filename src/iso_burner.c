@@ -14,9 +14,11 @@
 #include "stream_minimal.h"
 #include "disks.h"
 
-// Globals used by disks_win.c
+// Globals used by platform-specific disks_*.c
 char *device_names[DISKS_MAX];
 int num_devices = 0;
+int verbose = 0;
+int baud = 115200;
 
 void main_addToCombobox(char *text) {
     if (num_devices < DISKS_MAX) {
