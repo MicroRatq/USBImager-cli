@@ -26,7 +26,7 @@ ifeq ($(OS),Windows_NT)
 # Windows (mingw)
 WIN = 1
 SRC += disks_win.c
-LDFLAGS += -static -static-libgcc
+LDFLAGS += -static -static-libgcc -mconsole
 LIBS += -lsetupapi -lole32 -luser32 -lkernel32
 TARGET := $(TARGET).exe
 CFLAGS += -DNDEBUG -DWINVER=0x0500 -DUNICODE=1
