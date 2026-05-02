@@ -30,6 +30,8 @@ LDFLAGS += -static -static-libgcc
 LIBS += -lsetupapi -lole32 -luser32 -lkernel32
 TARGET := $(TARGET).exe
 CFLAGS += -DNDEBUG -DWINVER=0x0500 -DUNICODE=1
+WINDRES = windres
+RESOURCE_OBJ = manifest.o
 else
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
@@ -45,18 +47,24 @@ SRC += disks_linux.c
 endif
 endif
 
-OBJ = $(SRC:.c=.o)
+OBJ = $(addprefix $(OUT_DIR)/,$(SRC:.c=.o))
 
 ####### rules to compile #######
 
 all: $(TARGET)
 
-%.o: src/%.c
+$(OUT_DIR)/%.o: src/%.c
+	@mkdir -p $(OUT_DIR) 2>/dev/null || mkdir $(OUT_DIR) 2>/dev/null || true
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(TARGET): $(OBJ)
+$(OUT_DIR)/manifest.o: src/manifest.xml
 	@mkdir -p $(OUT_DIR) 2>/dev/null || mkdir $(OUT_DIR) 2>/dev/null || true
-	$(LD) $(LDFLAGS) -o $(OUT_DIR)/$@ $(OBJ) $(LIBS)
+	@echo Building manifest...
+	@echo 1 24 "$<" | $(WINDRES) -o $@
+
+$(TARGET): $(OBJ) $(if $(RESOURCE_OBJ),$(OUT_DIR)/$(RESOURCE_OBJ))
+	@mkdir -p $(OUT_DIR) 2>/dev/null || mkdir $(OUT_DIR) 2>/dev/null || true
+	$(LD) $(LDFLAGS) -o $(OUT_DIR)/$@ $(OBJ) $(if $(RESOURCE_OBJ),$(OUT_DIR)/$(RESOURCE_OBJ)) $(LIBS)
 ifeq ($(DEBUG),)
 	$(STRIP) $(OUT_DIR)/$@
 endif
@@ -64,7 +72,7 @@ endif
 ####### cleanup #######
 
 clean:
-	rm -f *.o src/*.o $(OUT_DIR)/$(TARGET) 2>/dev/null || true
+	rm -f *.o src/*.o $(OUT_DIR)/*.o $(OUT_DIR)/$(TARGET) 2>/dev/null || true
 
 distclean: clean
 	rm -rf $(OUT_DIR) 2>/dev/null || true
