@@ -22,7 +22,7 @@ OBJ = $(SRC:.c=.o)
 
 ####### detect operating system and platform #######
 
-ifneq ("$(wildcard /bin/*.exe)","")
+ifeq ($(OS),Windows_NT)
 # Windows (mingw)
 WIN = 1
 SRC += disks_win.c
@@ -31,7 +31,8 @@ LIBS += -lsetupapi -lole32 -luser32 -lkernel32
 TARGET := $(TARGET).exe
 CFLAGS += -DNDEBUG -DWINVER=0x0500 -DUNICODE=1
 else
-ifneq ("$(wildcard /Library/Frameworks)","")
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
 # MacOSX
 MACOSX = 1
 SRC += disks_darwin.c
