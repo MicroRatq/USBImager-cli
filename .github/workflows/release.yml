@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x64
+            os: windows-latest
+            artifact: usbimager-cli.exe
+          - target: linux-x64
+            os: ubuntu-latest
+            artifact: usbimager-cli
+          - target: linux-arm64
+            os: ubuntu-latest
+            artifact: usbimager-cli
+          - target: macos-x64
+            os: macos-latest
+            artifact: usbimager-cli
+          - target: macos-arm64
+            os: macos-latest
+            artifact: usbimager-cli
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up MSYS2 (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: make mingw-w64-x86_64-gcc
+
+      - name: Install dependencies (Linux ARM64)
+        if: matrix.target == 'linux-arm64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build
+        shell: bash
+        run: |
+          # Detect make command for Windows
+          MAKE_CMD="make"
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            # Using MSYS2 environment
+            export PATH="/c/msys64/mingw64/bin:/c/msys64/usr/bin:$PATH"
+          fi
+          
+          if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
+            make CC=aarch64-linux-gnu-gcc STRIP=aarch64-linux-gnu-strip
+          elif [[ "${{ matrix.target }}" == "macos-x64" ]]; then
+            make CC=clang CFLAGS="-arch x86_64 -Isrc" LDFLAGS="-arch x86_64"
+          elif [[ "${{ matrix.target }}" == "macos-arm64" ]]; then
+            make CC=clang CFLAGS="-arch arm64 -Isrc" LDFLAGS="-arch arm64"
+          else
+            $MAKE_CMD
+          fi
+
+      - name: Rename and Prepare Artifact
+        shell: bash
+        run: |
+          mkdir dist
+          # Add extension for windows
+          EXT=""
+          if [[ "${{ matrix.target }}" == "windows-x64" ]]; then EXT=".exe"; fi
+          cp build/${{ matrix.artifact }} dist/usbimager-cli-${{ matrix.target }}${EXT}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: usbimager-cli-${{ matrix.target }}
+          path: dist/*
+          retention-days: 1
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

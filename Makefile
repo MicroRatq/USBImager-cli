@@ -8,9 +8,10 @@
 ####### overall configuration #######
 
 TARGET = usbimager-cli
-CC = gcc
-LD = gcc
-STRIP = strip
+CC ?= gcc
+LD ?= gcc
+STRIP ?= strip
+WINDRES ?= windres
 CFLAGS = -Isrc -D_FILE_OFFSET_BITS=64 -D__USE_FILE_OFFSET64 -D__USE_LARGEFILE -Wall -Wextra -pedantic --std=c99 -O3 -fvisibility=hidden -DUSE_PHY=1
 LDFLAGS =
 LIBS =
@@ -30,7 +31,7 @@ LDFLAGS += -static -static-libgcc
 LIBS += -lsetupapi -lole32 -luser32 -lkernel32
 TARGET := $(TARGET).exe
 CFLAGS += -DNDEBUG -DWINVER=0x0500 -DUNICODE=1
-WINDRES = windres
+WINDRES ?= windres
 RESOURCE_OBJ = manifest.o
 else
 UNAME_S := $(shell uname -s)
