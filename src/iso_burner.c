@@ -170,9 +170,9 @@ int main(int argc, char **argv) {
     extern int disks_maxsize;
     disks_maxsize = 0; // Don't limit by size
     
-    if (argc < 2) {
+    if (argc < 2 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
         print_help();
-        return 1;
+        return (argc < 2) ? 1 : 0;
     }
 
     if (strcmp(argv[1], "--list") == 0) {
