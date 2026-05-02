@@ -46,7 +46,7 @@ SRC += disks_linux.c
 endif
 endif
 
-OBJ = $(addprefix $(OUT_DIR)/,$(SRC:.c=.o))
+OBJ = $(addprefix $(OUT_DIR)/,$(patsubst %.m,%.o,$(SRC:.c=.o)))
 
 ####### rules to compile #######
 
