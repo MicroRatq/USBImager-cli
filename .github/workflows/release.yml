@@ -65,8 +65,10 @@ jobs:
             make CC=clang CFLAGS="-arch x86_64 -Isrc" LDFLAGS="-arch x86_64"
           elif [[ "${{ matrix.target }}" == "macos-arm64" ]]; then
             make CC=clang CFLAGS="-arch arm64 -Isrc" LDFLAGS="-arch arm64"
+          elif [[ "${{ matrix.target }}" == "windows-x64" ]]; then
+            make CC=gcc WINDRES=windres
           else
-            $MAKE_CMD
+            make
           fi
 
       - name: Rename and Prepare Artifact
