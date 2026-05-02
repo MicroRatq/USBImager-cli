@@ -1,7 +1,9 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <inttypes.h>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -44,7 +46,7 @@ void list_devices_json() {
         // Find disk id from disks_targets array
         int disk_id = disks_targets[i];
         uint64_t cap = disks_capacity[i];
-        printf("  {\"id\": %d, \"name\": \"%s\", \"capacity\": %llu}%s\n",
+        printf("  {\"id\": %d, \"name\": \"%s\", \"capacity\": %" PRIu64 "}%s\n",
                disk_id, device_names[i], cap,
                (i == num_devices - 1) ? "" : ",");
     }
@@ -120,7 +122,7 @@ int burn_iso_image(const char *iso_file, int disk_id, int verify, progress_callb
 
         DWORD written;
         if (!WriteFile((HANDLE)hDrive, buf, write_bytes, &written, NULL) || written != (DWORD)write_bytes) {
-            fprintf(stderr, "\nWrite failed at offset %llu (Error: %lu)\n", ctx.readSize - read_bytes, GetLastError());
+            fprintf(stderr, "\nWrite failed at offset %" PRIu64 " (Error: %lu)\n", ctx.readSize - read_bytes, GetLastError());
             VirtualFree(buf, 0, MEM_RELEASE);
             disks_close(hDrive);
             stream_close(&ctx);
@@ -128,7 +130,7 @@ int burn_iso_image(const char *iso_file, int disk_id, int verify, progress_callb
         }
 #else
         if (write((int)(intptr_t)hDrive, buf, write_bytes) != (ssize_t)write_bytes) {
-            fprintf(stderr, "\nWrite failed at offset %llu (Error: %s)\n", ctx.readSize - read_bytes, strerror(errno));
+            fprintf(stderr, "\nWrite failed at offset %" PRIu64 " (Error: %s)\n", ctx.readSize - read_bytes, strerror(errno));
             free(buf);
             disks_close(hDrive);
             stream_close(&ctx);

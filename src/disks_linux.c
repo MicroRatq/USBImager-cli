@@ -38,7 +38,6 @@
 #include <termios.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
-#include "lang.h"
 #include "main.h"
 #include "disks.h"
 
@@ -198,8 +197,8 @@ void disks_refreshlist(void)
             str[0] = 0;
             if(size) {
                 sizeInGbTimes10 = (int)((uint64_t)(10 * size) >> 30L);
-                if(sizeInGbTimes10 < 10) { unit = lang[L_MIB]; sizeInGbTimes10 = (int)((uint64_t)(10 * (size + 1024L*1024L-1L)) >> 20L); }
-                else unit = lang[L_GIB];
+                if(sizeInGbTimes10 < 10) { unit = " MiB"; sizeInGbTimes10 = (int)((uint64_t)(10 * (size + 1024L*1024L-1L)) >> 20L); }
+                else unit = " GiB";
                 snprintf(str, sizeof(str)-1, "%s [%d.%d %s] %s %s", de->d_name,
                     sizeInGbTimes10 / 10, sizeInGbTimes10 % 10, unit, vendorName, productName);
             } else
@@ -245,7 +244,7 @@ void disks_refreshlist(void)
                     while((de = readdir(dir))) {
                         if(memcmp(de->d_name, serials[k], strlen(serials[k]))) continue;
                         disks_targets[i++] = 1024 + k*256 + atoi(de->d_name + strlen(serials[k]));
-                        sprintf(str, "%s %s", de->d_name, lang[L_SERIAL]);
+                        sprintf(str, "%s Serial", de->d_name);
                         main_addToCombobox(str);
                     }
                     closedir(dir);

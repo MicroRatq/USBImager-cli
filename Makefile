@@ -37,9 +37,8 @@ UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
 # MacOSX
 MACOSX = 1
-SRC += disks_darwin.c
-LDFLAGS += -framework CoreFoundation -framework IOKit -framework DiskArbitration
-LD = ld
+SRC += disks_darwin.m
+LDFLAGS += -framework CoreFoundation -framework IOKit -framework DiskArbitration -framework Foundation
 else
 # Linux
 LINUX = 1

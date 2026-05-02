@@ -52,7 +52,6 @@
 #import <IOKit/IOBSD.h>
 #import <IOKit/storage/IOBlockStorageDevice.h>
 
-#import "lang.h"
 #import "main.h"
 #import "disks.h"
 
@@ -239,8 +238,8 @@ void disks_refreshlist(void)
         }
         if(size) {
             int sizeInGbTimes10 = (int)((long int)(10 * size) >> 30L);
-            char *unit = lang[L_GIB];
-            if(sizeInGbTimes10 < 10) { unit = lang[L_MIB]; sizeInGbTimes10 = (int)((uint64_t)(10 * (size + 1024L*1024L-1L)) >> 20L); }
+            char *unit = " GiB";
+            if(sizeInGbTimes10 < 10) { unit = " MiB"; sizeInGbTimes10 = (int)((uint64_t)(10 * (size + 1024L*1024L-1L)) >> 20L); }
             snprintf(str, sizeof(str)-1, "%s [%d.%d %s] %s %s", deviceName,
                 sizeInGbTimes10 / 10, sizeInGbTimes10 % 10, unit, vendorName, productName);
         } else
@@ -274,7 +273,7 @@ void disks_refreshlist(void)
             deviceName = [[NSString stringWithFormat: @"%@", bsdName] UTF8String];
 
             strncpy(disks_serials[j], deviceName, 63);
-            snprintf(str, sizeof(str)-1, "%s %s", deviceName, lang[L_SERIAL]);
+            snprintf(str, sizeof(str)-1, "%s Serial", deviceName);
             disks_targets[i++] = 1024 + j++;
             main_addToCombobox(str);
 
