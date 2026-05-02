@@ -8,6 +8,7 @@ A high-performance, zero-dependency, cross-platform command-line tool designed f
 - **Native Performance**: Leverages low-level OS APIs (Windows Raw Disk I/O) to achieve maximum hardware throughput.
 - **Zero-Dependency Design**: Statically linked for maximum portability; requires no external libraries or runtimes.
 - **Automation Ready**: Native JSON output for device enumeration allows seamless integration with Python, Node.js, and other backend services.
+- **Built-in Privilege Management**: On Windows, the executable includes a manifest that automatically requests Administrator privileges.
 - **Advanced Windows Optimization**:
   - Direct disk access using `FILE_FLAG_NO_BUFFERING`.
   - Memory-aligned buffering via `VirtualAlloc` to satisfy strict hardware alignment requirements.
@@ -28,32 +29,30 @@ Writes the specified ISO image to the target physical disk index.
 ```bash
 usbimager-cli --write <iso_file> <disk_id>
 ```
-*Note: Administrative/Root privileges are required for direct hardware access.*
+*Note: Administrative/Root privileges are required. On Windows, a UAC prompt will appear automatically.*
 
 ## Compilation
 
-### Using Makefile (Recommended)
-This project includes a cross-platform `Makefile`. By default, it builds the CLI version and outputs to the `build/` directory.
+### Prerequisites
+- **Windows**: We highly recommend [w64devkit](https://github.com/skeeto/w64devkit/releases) for a zero-installation, portable build environment that includes `gcc`, `make`, and `windres`.
+- **Linux/macOS**: Standard `gcc` and `make`.
 
-Run the following command from the `src` directory:
+### Build Commands
+Run the following commands from the project **root** directory:
 ```bash
-make
-```
-*Note: On Windows, use `mingw32-make` if `make` is not available.*
-
-### Manual Compilation (Fallback)
-If `make` is not available, you can compile manually from the `src` directory:
-```bash
-mkdir ..\build
-gcc -DUSE_PHY -o ..\build\usbimager-cli.exe iso_burner.c disks_win.c stream_minimal.c -lsetupapi -lole32 -luser32 -lkernel32
+make          # Build the CLI tool to the build/ directory
+make package  # Create a distribution ZIP package with binary and docs
+make clean    # Remove all intermediate objects and build artifacts
 ```
 
 ## Project Structure
 
+- `src/`: Core C source files and Windows `manifest.xml`.
+- `build/`: Compilation output and intermediate `.o` objects.
+- `Makefile`: Unified cross-platform build configuration.
 - `src/iso_burner.c`: CLI implementation and automation interface logic.
 - `src/disks_win.c`: High-performance Windows disk I/O and device management.
 - `src/stream_minimal.h/c`: Efficient raw stream processing engine.
-- `src/disks.h`: Cross-platform disk abstraction interface.
 
 ## Credits
 
