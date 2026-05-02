@@ -62,9 +62,9 @@ jobs:
           if [[ "${{ matrix.target }}" == "linux-arm64" ]]; then
             make CC=aarch64-linux-gnu-gcc STRIP=aarch64-linux-gnu-strip
           elif [[ "${{ matrix.target }}" == "macos-x64" ]]; then
-            make CC=clang CFLAGS="-arch x86_64 -Isrc" LDFLAGS="-arch x86_64"
+            make CC="clang -arch x86_64"
           elif [[ "${{ matrix.target }}" == "macos-arm64" ]]; then
-            make CC=clang CFLAGS="-arch arm64 -Isrc" LDFLAGS="-arch arm64"
+            make CC="clang -arch arm64"
           elif [[ "${{ matrix.target }}" == "windows-x64" ]]; then
             make CC=gcc WINDRES=windres
           else
