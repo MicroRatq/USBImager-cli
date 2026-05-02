@@ -33,8 +33,10 @@ usbimager-cli --write <iso_file> <disk_id>
 ## Compilation
 
 ### Windows (MinGW)
+Run the following commands from the `src` directory:
 ```bash
-gcc -DUSE_PHY -o usbimager-cli.exe iso_burner.c disks_win.c stream_minimal.c -lsetupapi -lole32 -luser32 -lkernel32
+mkdir ..\build
+gcc -DUSE_PHY -o ..\build\usbimager-cli.exe iso_burner.c disks_win.c stream_minimal.c -lsetupapi -lole32 -luser32 -lkernel32
 ```
 
 ## Project Structure
