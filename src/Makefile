@@ -28,41 +28,51 @@
 
 ####### overall configuration #######
 
-TARGET = usbimager
 CC = gcc
 LD = gcc
 STRIP = strip
-# setting DISKS_TEST to 1 will add a test.bin "device" to the target disks list
 CFLAGS = -DDISKS_TEST=0 -D_FILE_OFFSET_BITS=64 -D__USE_FILE_OFFSET64 -D__USE_LARGEFILE -Wall -Wextra -pedantic --std=c99 -O3 -fvisibility=hidden -I./zlib -I./bzip2 -I./xz -I./zstd
 LDFLAGS =
 LIBS =
-DECOMPRESSORS = zlib/libz.a bzip2/libbz2.a xz/libxz.a zstd/libzstd.a
 PREFIX ?= usr/
 INSTDIR=$(DESTDIR:/=)/$(PREFIX)
 
 VERSION = $(shell cat main.h|grep USBIMAGER_VERSION|cut -d '"' -f 2)
-SRC = $(filter-out $(wildcard main_*.c) $(wildcard disks_*.c),$(wildcard *.c))
+USE_CLI ?= 1
+USE_PHY ?= 1
+OUT_DIR ?= ../build
+
+ifeq ($(USE_CLI),1)
+    TARGET = usbimager-cli
+    SRC = iso_burner.c stream_minimal.c
+    CFLAGS += -DUSE_PHY=$(USE_PHY)
+else
+    TARGET = usbimager
+    SRC = $(filter-out $(wildcard main_*.c) $(wildcard disks_*.c) iso_burner.c stream_minimal.c,$(wildcard *.c))
+    DECOMPRESSORS = zlib/libz.a bzip2/libbz2.a xz/libxz.a zstd/libzstd.a
+endif
 OBJ =
 
-####### detect operating system and platform #######
+######## detect operating system and platform #######
 
 ifneq ("$(wildcard /bin/*.exe)","")
 # Windows (mingw)
 WIN = 1
-SRC += main_win.c disks_win.c
-CFLAGS += -DNDEBUG -DWINVER=0x0500 -DUNICODE=1
-LDFLAGS += -mwindows -static -static-libgcc
-TARGET = usbimager.exe
-WINDRES = windres
-ifeq ($(ARCH),)
-ARCH=$(MSYSTEM_CARCH)
-endif
-ARCH?=i686
-ifeq ($(USE_WRONLY),)
-OBJ += resource.o
+ifeq ($(USE_CLI),1)
+    SRC += disks_win.c
+    LDFLAGS += -static -static-libgcc
 else
-OBJ += resourcewo.o
+    SRC += main_win.c disks_win.c
+    LDFLAGS += -mwindows -static -static-libgcc
+    ifeq ($(USE_WRONLY),)
+        OBJ += resource.o
+    else
+        OBJ += resourcewo.o
+    endif
 endif
+CFLAGS += -DNDEBUG -DWINVER=0x0500 -DUNICODE=1
+TARGET := $(TARGET).exe
+WINDRES = windres
 ifneq ($(USE_PHY),)
 CFLAGS+=-DUSE_PHY=1
 FRM=win-gdi-phy
@@ -92,15 +102,19 @@ CFLAGS_MINVER=-mmacos-version-min=$(MINVER)
 CFLAGS+=-DMACOSX=1 -x objective-c -fobjc-exceptions $(CFLAGS_MINVER)
 LDFLAGS+=-macos_version_min $(MINVER) -framework CoreFoundation -framework IOKit -framework DiskArbitration
 ifneq ($(USE_X11),)
+ifneq ($(USE_CLI),1)
 SRC += main_x11.c
+endif
 CFLAGS += -I/usr/include/X11 -I/opt/X11/include
 LIBS += -lX11
 FRM = macosx-x11
 else
+ifneq ($(USE_CLI),1)
 SRC += main_libui.c
-CFLAGS += -pthread
 LDFLAGS += -framework Foundation -framework Cocoa
 LIBS += libui/$(LIBUI) -lc -lobjc -lpthread
+endif
+CFLAGS += -pthread
 FRM = macosx-cocoa
 endif
 SRC += disks_darwin.c
@@ -111,7 +125,9 @@ else
 LINUX = 1
 ARCH = $(shell uname -m)
 ifeq ($(USE_LIBUI)$(USE_GTK)$(USE_TUI),)
+ifneq ($(USE_CLI),1)
 SRC += main_x11.c
+endif
 CFLAGS += -I/usr/include/X11
 ifneq ($(USE_UNIFONT),)
 CFLAGS += -DUSE_UNIFONT
@@ -122,15 +138,21 @@ FRM = linux-x11
 GRP = disk
 else
 ifneq ($(USE_TUI),)
+ifneq ($(USE_CLI),1)
 SRC += main_tui.c
+endif
 FRM = linux-tui
 GRP = disk
 else
 ifneq ($(USE_GTK),)
+ifneq ($(USE_CLI),1)
 SRC += main_gtk.c
+endif
 CFLAGS += $(shell pkg-config --cflags gtk+-3.0)
 else
+ifneq ($(USE_CLI),1)
 SRC += main_libui.c
+endif
 ifeq ($(ARCH),x86_64)
 LIBS += libui/linux.a
 else
@@ -207,14 +229,17 @@ resourcewo.o: misc/resourcewo.rc
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 $(TARGET): $(DECOMPRESSORS) $(OBJ)
-	$(LD) $(LDFLAGS) -o $@ $(OBJ) $(DECOMPRESSORS) $(LIBS)
-ifeq ($(DEBUG),)
-	$(STRIP) $(TARGET)
-endif
+	@mkdir -p $(OUT_DIR) 2>/dev/null || mkdir $(OUT_DIR) 2>/dev/null || true
+	$(LD) $(LDFLAGS) -o $(OUT_DIR)/$@ $(OBJ) $(DECOMPRESSORS) $(LIBS)
+ifneq ($(USE_CLI),1)
+    # Only try to chgrp for GUI installs where group bits might be needed
 ifneq ($(GRP),)
-	chgrp $(GRP) $(TARGET) || true
-	chmod g+s $(TARGET) || true
-	@(ls -la $(TARGET)|grep $(GRP)|grep sr) || printf "\n\nWARNING - Your user is not member of the '$(GRP)' group, can't grant access. Run the following two commands manually:\n\n  sudo chgrp $(GRP) $(TARGET)\n  sudo chmod g+s $(TARGET)\n\n"
+	chgrp $(GRP) $(OUT_DIR)/$(TARGET) || true
+	chmod g+s $(OUT_DIR)/$(TARGET) || true
+endif
+endif
+ifeq ($(DEBUG),)
+	$(STRIP) $(OUT_DIR)/$(TARGET)
 endif
 
 ####### install and package creation #######

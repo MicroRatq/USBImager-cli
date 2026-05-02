@@ -32,8 +32,17 @@ usbimager-cli --write <iso_file> <disk_id>
 
 ## Compilation
 
-### Windows (MinGW)
-Run the following commands from the `src` directory:
+### Using Makefile (Recommended)
+This project includes a cross-platform `Makefile`. By default, it builds the CLI version and outputs to the `build/` directory.
+
+Run the following command from the `src` directory:
+```bash
+make
+```
+*Note: On Windows, use `mingw32-make` if `make` is not available.*
+
+### Manual Compilation (Fallback)
+If `make` is not available, you can compile manually from the `src` directory:
 ```bash
 mkdir ..\build
 gcc -DUSE_PHY -o ..\build\usbimager-cli.exe iso_burner.c disks_win.c stream_minimal.c -lsetupapi -lole32 -luser32 -lkernel32
