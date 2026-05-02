@@ -1,7 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#endif
 #include "stream_minimal.h"
 #include "disks.h"
 
@@ -17,7 +24,11 @@ void main_addToCombobox(char *text) {
 }
 
 void main_getErrorMessage(void) {
+#ifdef _WIN32
     fprintf(stderr, "Disk Error: %lu\n", GetLastError());
+#else
+    fprintf(stderr, "Disk Error: %s\n", strerror(errno));
+#endif
 }
 
 void main_onProgress(void *data) {
@@ -73,18 +84,23 @@ int burn_iso_image(const char *iso_file, int disk_id, int verify, progress_callb
         return 0;
     }
 
-    HANDLE hDrive = (HANDLE)disks_open(target_idx, ctx.fileSize);
-    if (!hDrive || hDrive == (HANDLE)-1 || hDrive == (HANDLE)-2 || hDrive == (HANDLE)-3) {
+    void *hDrive = disks_open(target_idx, ctx.fileSize);
+    if (!hDrive || hDrive == (void*)-1 || hDrive == (void*)-2 || hDrive == (void*)-3) {
         fprintf(stderr, "Failed to open drive for writing.\n");
         stream_close(&ctx);
         return 0;
     }
 
-    // Allocate 1MB buffer - use VirtualAlloc for sector alignment (required for FILE_FLAG_NO_BUFFERING)
     int buf_size = 1024 * 1024;
-    char *buf = (char *)VirtualAlloc(NULL, buf_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    char *buf;
+#ifdef _WIN32
+    buf = (char *)VirtualAlloc(NULL, buf_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#else
+    buf = (char *)malloc(buf_size);
+#endif
+
     if (!buf) {
-        fprintf(stderr, "Out of memory (VirtualAlloc failed).\n");
+        fprintf(stderr, "Out of memory.\n");
         disks_close(hDrive);
         stream_close(&ctx);
         return 0;
@@ -92,23 +108,33 @@ int burn_iso_image(const char *iso_file, int disk_id, int verify, progress_callb
 
     printf("Starting burn process...\n");
     int read_bytes = 0;
-    DWORD written;
     while ((read_bytes = stream_read(&ctx, buf, buf_size)) > 0) {
         int write_bytes = read_bytes;
-        // Pad to 4096-byte sector boundary for raw disk write (required for some Advanced Format drives with NO_BUFFERING)
+#ifdef _WIN32
+        // Pad to 4096-byte sector boundary for raw disk write on Windows (required for NO_BUFFERING)
         if (write_bytes % 4096 != 0) {
             int pad = 4096 - (write_bytes % 4096);
             memset(buf + write_bytes, 0, pad);
             write_bytes += pad;
         }
 
-        if (!WriteFile(hDrive, buf, write_bytes, &written, NULL) || written != (DWORD)write_bytes) {
+        DWORD written;
+        if (!WriteFile((HANDLE)hDrive, buf, write_bytes, &written, NULL) || written != (DWORD)write_bytes) {
             fprintf(stderr, "\nWrite failed at offset %llu (Error: %lu)\n", ctx.readSize - read_bytes, GetLastError());
             VirtualFree(buf, 0, MEM_RELEASE);
             disks_close(hDrive);
             stream_close(&ctx);
             return 0;
         }
+#else
+        if (write((int)(intptr_t)hDrive, buf, write_bytes) != (ssize_t)write_bytes) {
+            fprintf(stderr, "\nWrite failed at offset %llu (Error: %s)\n", ctx.readSize - read_bytes, strerror(errno));
+            free(buf);
+            disks_close(hDrive);
+            stream_close(&ctx);
+            return 0;
+        }
+#endif
         if (callback) {
             callback(stream_status(&ctx));
         }
@@ -120,7 +146,11 @@ int burn_iso_image(const char *iso_file, int disk_id, int verify, progress_callb
     }
 
     printf("Syncing disks...\n");
+#ifdef _WIN32
     VirtualFree(buf, 0, MEM_RELEASE);
+#else
+    free(buf);
+#endif
     disks_close(hDrive);
     stream_close(&ctx);
     return 1;

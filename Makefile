@@ -9,7 +9,6 @@
 
 TARGET = usbimager-cli
 CC ?= gcc
-LD ?= gcc
 STRIP ?= strip
 WINDRES ?= windres
 CFLAGS = -Isrc -D_FILE_OFFSET_BITS=64 -D__USE_FILE_OFFSET64 -D__USE_LARGEFILE -Wall -Wextra -pedantic --std=c99 -O3 -fvisibility=hidden -DUSE_PHY=1
@@ -65,7 +64,7 @@ $(OUT_DIR)/manifest.o: src/manifest.xml
 
 $(TARGET): $(OBJ) $(if $(RESOURCE_OBJ),$(OUT_DIR)/$(RESOURCE_OBJ))
 	@mkdir -p $(OUT_DIR) 2>/dev/null || mkdir $(OUT_DIR) 2>/dev/null || true
-	$(LD) $(LDFLAGS) -o $(OUT_DIR)/$@ $(OBJ) $(if $(RESOURCE_OBJ),$(OUT_DIR)/$(RESOURCE_OBJ)) $(LIBS)
+	$(CC) $(LDFLAGS) -o $(OUT_DIR)/$@ $(OBJ) $(if $(RESOURCE_OBJ),$(OUT_DIR)/$(RESOURCE_OBJ)) $(LIBS)
 ifeq ($(DEBUG),)
 	$(STRIP) $(OUT_DIR)/$@
 endif
