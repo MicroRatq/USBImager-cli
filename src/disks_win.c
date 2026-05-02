@@ -31,9 +31,14 @@
 #include <winioctl.h>
 #include <commctrl.h>
 #include <ntdddisk.h>
-#include "lang.h"
-#include "main.h"
 #include "disks.h"
+
+int verbose = 0;
+int baud = 115200;
+
+extern void main_addToCombobox(char *text);
+extern void main_getErrorMessage(void);
+extern void main_onProgress(void *data);
 
 #ifdef USE_PHY
 int disks_phy = 1;
@@ -72,7 +77,7 @@ void disks_refreshlist(void) {
     main_addToCombobox((char*)szLbText);
 #endif
     cdrive = 10;
-    hTargetDevice = CreateFileA(fn, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+    hTargetDevice = CreateFileA(fn, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
     if (hTargetDevice != INVALID_HANDLE_VALUE) {
         if(DeviceIoControl(hTargetDevice, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, NULL, 0, &volumeDiskExtents, sizeof volumeDiskExtents, &bytesReturned, NULL))
             cdrive = (int)volumeDiskExtents.Extents[0].DiskNumber;
@@ -87,7 +92,7 @@ void disks_refreshlist(void) {
             fn[4] = letter;
             /* fn[6] = '\\'; if(GetDriveType(fn) != DRIVE_REMOVABLE) continue; else fn[6] = 0; */
             if(letter == 'C') continue;
-            hTargetDevice = CreateFileA(fn, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+            hTargetDevice = CreateFileA(fn, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
             if (hTargetDevice != INVALID_HANDLE_VALUE) {
                 /* skip drive letters that are on the same physical disk as the C: drive */
                 if(DeviceIoControl(hTargetDevice, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, NULL, 0, &volumeDiskExtents,
@@ -102,7 +107,7 @@ void disks_refreshlist(void) {
             }
         } else {
             sprintf(fn, "\\\\.\\PhysicalDrive%c", letter);
-            hTargetDevice = CreateFileA(fn, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_NO_BUFFERING, NULL);
+            hTargetDevice = CreateFileA(fn, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_NO_BUFFERING, NULL);
             if (hTargetDevice != INVALID_HANDLE_VALUE) {
                 if(disks_all || cdrive != (int)(letter - '0')) {
                     disks_targets[i] = (int)(letter - '0');
@@ -139,8 +144,8 @@ void disks_refreshlist(void) {
             }
             if (totalNumberOfBytes > 0) {
                 long long int sizeInGbTimes10 = ((long long int)(10 * totalNumberOfBytes) >> 30LL);
-                wchar_t *unit = lang[L_GIB];
-                if(sizeInGbTimes10 < 10) { unit = lang[L_MIB]; sizeInGbTimes10 = ((long long int)(10 * (totalNumberOfBytes + 1024LL*1024LL-1LL)) >> 20LL); }
+                wchar_t *unit = L"GiB";
+                if(sizeInGbTimes10 < 10) { unit = L"MiB"; sizeInGbTimes10 = ((long long int)(10 * (totalNumberOfBytes + 1024LL*1024LL-1LL)) >> 20LL); }
                 wsprintfW(siz, L" [%d.%d %s]", (int)(sizeInGbTimes10 / 10), (int)(sizeInGbTimes10 % 10), unit);
                 for(wc = siz; *wc; wc++, j++) szLbText[j] = *wc;
             }
@@ -169,8 +174,11 @@ void disks_refreshlist(void) {
             }
             szLbText[j] = 0;
             CloseHandle(hTargetDevice);
-            disks_capacity[i++] = (uint64_t)totalNumberOfBytes;
-            main_addToCombobox((char*)szLbText);
+            disks_capacity[i] = (uint64_t)totalNumberOfBytes;
+            char szLbTextA[1024];
+            WideCharToMultiByte(CP_UTF8, 0, szLbText, -1, szLbTextA, sizeof(szLbTextA), NULL, NULL);
+            main_addToCombobox(szLbTextA);
+            i++;
             if(i >= DISKS_MAX) break;
         }
     }
@@ -180,7 +188,7 @@ void disks_refreshlist(void) {
             hTargetDevice = CreateFileA(fn, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_NO_BUFFERING, NULL);
             if(hTargetDevice != INVALID_HANDLE_VALUE) {
                 CloseHandle(hTargetDevice);
-                wsprintfW(szLbText, L"COM%d: %s", j, lang[L_SERIAL]);
+                wsprintfW(szLbText, L"COM%d: Serial", j);
                 disks_targets[i++] = 1024 + j;
                 main_addToCombobox((char*)szLbText);
             }
